@@ -61,5 +61,20 @@ def calc_driven_side (gear_ratio, omega_driver, torque_driver) :
     torque_driven = torque_driver * gear_ratio
     return omega_driven, torque_driven
 
+#Function 5#
+def calc_pitch_diameter (module, teeth) :
+    """
+    Calculate the pitch diameter of the teeth
+
+    Args:
+    module (int): Module of the Gear
+    teeth (int): Teeth of the gear
+
+    Returns:
+    pitch_diameter (float): Pitch diameter of the teeth
+    """
+    pitch_diameter = module * teeth
+    return pitch_diameter
+
 
 
