@@ -41,7 +41,7 @@ Gear_Train_Optimiser/
 
 ---
 
-## `src/calculations.py` — 9 functions, all complete with docstrings
+## `src/calculations.py` — 11 functions, all complete with docstrings (updated through Lesson 14)
 
 1. `calc_gear_ratio(teeth_driver, teeth_driven)` → `teeth_driven / teeth_driver`
 2. `rpm_to_omega(rpm)` → `(2 * 3.14 * rpm) / 60`
@@ -52,8 +52,21 @@ Gear_Train_Optimiser/
 7. `calc_radial_force(tangential_force, pressure_angle_deg)` → uses `math.radians()` + `math.tan()`, returns Newtons
 8. `get_lewis_form_factor(teeth)` → dictionary lookup table (standard 20° pressure-angle Y values for teeth 12–300), finds nearest match via `min(..., key=lambda t: abs(t-teeth))`
 9. `calc_bending_stress(tangential_force, module, face_width, y_factor)` → `tangential_force / (module * face_width * y_factor)`, returns N/mm² (approx MPa) — docstring explicitly flags this as the simplified Lewis equation (no AGMA dynamic/reliability factors), recommends validation against textbook
+10. `get_allowable_stress(material_name)` → reads `data/materials.csv` via `pd.read_csv()`, filters by exact material name match, returns `allowable_bending_stress_mpa` value. **KNOWN LIMITATION (not yet fixed):** if `material_name` doesn't exist in the CSV, this crashes with `IndexError: index 0 is out of bounds for axis 0 with size 0` — no error handling yet. This is intentionally deferred to a future lesson on input validation/error handling (ties into `src/validation.py`, still empty).
+11. `calc_safety_factor(allowable_stress, bending_stress)` → `allowable_stress / bending_stress`, dimensionless. Rule of thumb: >1 = predicted to survive, but real engineering wants meaningful margin (1.5–3+), not a value near 1.0.
 
-**Note:** `import math` was added to top of `calculations.py` for functions 7 and 8.
+**Note:** `import math` and `import pandas as pd` are both at top of `calculations.py` (math for functions 7/8, pandas for function 10).
+
+### `data/materials.csv` — populated (Lesson 14)
+```
+material,allowable_bending_stress_mpa
+Cast Iron,55
+Steel (Low Carbon),138
+"Steel (Medium Carbon, Heat Treated)",275
+Alloy Steel,414
+Bronze,55
+```
+**Important CSV lesson learned:** any material name containing a comma (e.g. "Steel (Medium Carbon, Heat Treated)") MUST be wrapped in double quotes, or the comma gets misread as a column separator and silently corrupts the row (data shifts into wrong columns, no error thrown). Values are simplified/approximate references for the Lewis equation from introductory machine design sources — documented as NOT a substitute for a real materials datasheet, per Rule #16.
 
 **Verified test case** (teeth_driver=20, teeth_driven=60, rpm=1500, power=5000, module=2, pressure_angle=20°, face_width=10×module=20):
 - gear_ratio = 3.0, omega_driver ≈ 157.0, torque_driver ≈ 31.85 N·m
@@ -62,6 +75,10 @@ Gear_Train_Optimiser/
 - tangential_force = 1592.5 N, radial_force ≈ 579.62 N
 - Y_factor (teeth=20, exact table match) = 0.29
 - bending_stress ≈ 137.28 N/mm² — hand-verified: 1592.5/(2×20×0.29) = 137.28 ✓
+- allowable_stress ("Steel (Low Carbon)") = 138
+- **safety_factor ≈ 1.005** — technically >1 but a poor/risky design in real practice (essentially no margin; real designs typically target 1.5–3+). This result is a good illustration of *why* the optimizer step matters — a candidate can look "valid" but still be a bad choice.
+
+**FULL CALCULATION CHAIN NOW COMPLETE:** power/speed → torque → forces → bending stress → safety factor, for a single candidate. Next major step is applying this across every row of the filtered candidates DataFrame at once (Lesson 15, needs Pandas `.apply()` — not yet taught).
 
 ## `src/candidates.py` — 2 functions, complete and tested
 
@@ -101,20 +118,18 @@ Currently defines test variables explicitly at top (`teeth_driver=20`, `teeth_dr
 
 ## Immediate Next Steps (in order)
 
-1. **Lesson 14 (next up):** Compute a real **safety factor** — needs material yield strength. This requires:
-   - Populating `data/materials.csv` with real material properties (e.g., yield strength for common gear materials — steel grades etc.)
-   - A new function to read/look up material data (likely `pd.read_csv`)
-   - `safety_factor = yield_strength / bending_stress` (or similar standard relationship — confirm exact formula before implementing, per Rule #16)
-2. Git commit checkpoint after safety factor is added.
-3. Mini-lesson on SciPy basics (not yet taught) before building `src/optimiser.py` — use `scipy.optimize` to rank/select best candidates by an objective (e.g., maximize safety factor, minimize size/center distance), operating on the filtered candidate DataFrame.
+1. **Lesson 15 (next up):** Apply the full calculation chain (tangential force → radial force → bending stress → safety factor) across EVERY row of the filtered candidates DataFrame at once, not just one hardcoded example. Needs a new Pandas concept: `.apply()` (running a function across DataFrame rows) — not yet taught, teach as part of this lesson. End result: filtered candidates DataFrame gains new columns (tangential_force, radial_force, bending_stress, safety_factor) for every single candidate.
+2. Git commit checkpoint after this is working.
+3. Mini-lesson on SciPy basics (not yet taught) before building `src/optimiser.py` — use `scipy.optimize` (or simpler: sort/rank by safety_factor using Pandas) to select best candidates by an objective (e.g., maximize safety factor while minimizing size/center distance — likely a multi-objective trade-off worth discussing).
 4. Mini-lesson on `pytest` (not yet taught) before writing `tests/test_calculations.py`, `tests/test_candidates.py`, `tests/test_optimiser.py`.
-5. Build the Streamlit interface — `app.py` currently is just a test/orchestration script; this becomes the real UI (input form → results table → charts).
-6. Validate results against a textbook example (e.g. Shigley's Mechanical Engineering Design) — per Rule #17.
-7. Write README.md properly, add screenshots once UI exists.
-8. Interview-question review across all phases before considering Project 1 "done."
+5. (Optional, lower priority) Add basic error handling to `get_allowable_stress()` for unrecognized material names — ties into `src/validation.py`, still empty.
+6. Build the Streamlit interface — `app.py` currently is just a test/orchestration script; this becomes the real UI (input form → results table → charts).
+7. Validate results against a textbook example (e.g. Shigley's Mechanical Engineering Design) — per Rule #17.
+8. Write README.md properly, add screenshots once UI exists.
+9. Interview-question review across all phases before considering Project 1 "done."
 
 ## Rough Progress Estimate
-~35–40% through Project 1 as of this log. Architecture, full calculation engine (ratio/torque/forces/bending stress), and candidate generation+filtering are done. Safety factor, SciPy optimization, Streamlit UI, testing, and validation/documentation remain — this is still the majority of remaining work.
+~45% through Project 1 as of this log. Architecture, and the FULL calculation engine (ratio/torque/forces/bending stress/safety factor) are done, plus candidate generation+filtering. Remaining: applying calculations across all candidates at once, SciPy optimization, Streamlit UI, testing, and validation/documentation — the UI build is likely to be the single largest remaining time investment.
 
 ## Open Items / Decisions to Revisit
 - **Naming: `optimiser.py` vs `optimizer.py`** — was raised early, recommended standardizing to American spelling ("optimizer") for consistency with rest of codebase and with `scipy.optimize`, but file is still named `optimiser.py` and not yet renamed. Worth deciding before writing real code into it (cheaper to rename now while empty).
