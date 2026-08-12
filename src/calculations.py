@@ -1,3 +1,5 @@
+import math as math
+
 #Function 1#
 def calc_gear_ratio (teeth_driver, teeth_driven) :
     """
@@ -76,5 +78,73 @@ def calc_pitch_diameter (module, teeth) :
     pitch_diameter = module * teeth
     return pitch_diameter
 
+#Function 6#
+def calc_tangential_force (torque, pitch_diameter_mm) :
+    """
+    Calculate the tangential force of the gear
 
+    Args:
+    torque (float): Torque on the driver gear in N.m
+    pitch_diameter_mm (float): Pitch diameter of the teeth in mm
+
+    Returns:
+    float: tangential force of the gear
+    """
+    pitch_diameter_m = pitch_diameter_mm / 1000
+    tangential_force = 2 * torque / pitch_diameter_m
+    return tangential_force
+
+#Function 7#
+def calc_radial_force(tangential_force, pressure_angle_degree) :
+    """
+    Calculate the radial force of the gear
+    
+    Args:
+    tangential_force (float): tangential force of the gear
+    pressure_angle_degree (float): Pressure angle of the gear in degrees
+
+    Returns:
+    float: radial force of the gear
+    """
+    pressure_angle_radian = math.radians(pressure_angle_degree)
+    radial_force = tangential_force * math.tan(pressure_angle_radian)
+    return radial_force
+
+#Function 8#
+def get_lewis_form_factor(teeth):
+    lewis_form_factors = {
+        12: 0.245, 14: 0.261, 17: 0.277, 20: 0.290, 24: 0.302,
+        30: 0.314, 40: 0.336, 60: 0.355, 75: 0.371, 100: 0.400,
+        150: 0.446, 300: 0.506
+    }
+
+    """
+    Calculate the lewis form factor
+
+    Args:
+    teeth (int): Teeth of the gear
+
+    Returns:
+    float: lewis form factor
+    """
+    closest_teeth = min(lewis_form_factors.keys(), key=lambda t: abs(t - teeth))
+    y_factor = lewis_form_factors[closest_teeth]
+    return y_factor
+
+#Function 9#
+def calc_bending_stress (tangential_force, module, face_width, y_factor):
+    """
+    Calculate the bending stress of the gear
+
+    Args:
+    tangential_force (float): tangential force of the gear
+    module (float): Module of the Gear
+    face_width (float): Face width of the gear
+    y_factor (float): lewis form factor
+
+    Returns:
+    float: bending stress of the gear in N/mm ^ 2
+    """
+    bending_stress = tangential_force / (module * face_width * y_factor)
+    return bending_stress
 
