@@ -40,3 +40,18 @@ def generate_candidates(target_ratio, standard_modules, teeth_range):
     df = pd.DataFrame(candidates)
     return df
 
+def filter_by_ratio (df, target_ratio, tolerance):
+    """
+   Filter Candidate gear design to only those within a tolerance of the target ratio
+    
+    Args:
+    df (DataFrame): Table of candidate gear designs with columns
+    target_ratio(float): Desired gear ratio the candidates should approximate
+    tolerance: tolerance
+    
+    Returns:
+    df (DataFrame): Table of candidate gear designs with columns
+    """
+    mask = (df["actual_ratio"] >= target_ratio - tolerance) & (df["actual_ratio"] <= target_ratio + tolerance)
+    filtered_df = df[mask]
+    return filtered_df

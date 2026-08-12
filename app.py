@@ -1,5 +1,6 @@
 from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter
 from src.candidates import generate_candidates
+from src.candidates import filter_by_ratio
 import pandas as pd
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -26,3 +27,6 @@ print("centre_dist of driver: ", centre_dist)
 
 result = generate_candidates(2.7, [1,2,3], [15,20,25])
 print(result)
+
+filtered_result = filter_by_ratio(result,2.7,0.01)
+print(filtered_result)
