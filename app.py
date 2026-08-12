@@ -1,5 +1,8 @@
 from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter
-
+from src.candidates import generate_candidates
+import pandas as pd
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
 gear_ratio = calc_gear_ratio(20,60)
 print("Gear Ratio: ", gear_ratio)
 
@@ -20,3 +23,6 @@ print("pitch_diameter of driven: ", pitch_diameter_driven)
 
 centre_dist = (pitch_diameter_driver + pitch_diameter_driven) / 2
 print("centre_dist of driver: ", centre_dist)
+
+result = generate_candidates(2.7, [1,2,3], [15,20,25])
+print(result)

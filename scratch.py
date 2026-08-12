@@ -1,22 +1,34 @@
-def calc_pitch_diametre (module, teeth) :
+import pandas as pd
+
+def generate_candidates(target_ratio, standard_modules, teeth_range):
     """
-    Calculate the pitch diameter of the teeth
+    Calculating Candidates
 
     Args:
-    module (int): Module of the Gear
-    teeth (int): Teeth of the gear
+    target_ratio(float): Desired gear ratio the candidates should approximate
+    standard_modules: list of standard modules
+    teeth_range: range of teeth
 
     Returns:
-    pitch_diameter (float): Pitch diameter of the teeth
+    df (DataFrame): Table of candidate gear designs with columns
+        module, teeth_driver, teeth_driven, actual_ratio.
     """
-    pit_diameter = module * teeth
-    return pit_diameter
+    candidates = []   # empty list to collect rows
 
-pitch_diameter_driver = calc_pitch_diametre(2,20)
-print("pitch_diameter of driver: ", pitch_diameter_driver)
+    for module in standard_modules:
+        for teeth_driver in teeth_range:
+            teeth_driven = round(teeth_driver * target_ratio)
+            actual_ratio = teeth_driven / teeth_driver
 
-pitch_diameter_driven = calc_pitch_diametre(2,60)
-print("pitch_diametre of driven: ", pitch_diameter_driven)
+            candidates.append({
+                "module": module,
+                "teeth_driver": teeth_driver,
+                "teeth_driven": teeth_driven,
+                "actual_ratio": actual_ratio
+            })
 
-centre_dist = (pitch_diameter_driver + pitch_diameter_driven) / 2
-print("centre_dist of driver: ", centre_dist)
+    df = pd.DataFrame(candidates)
+    return df
+
+result_df = generate_candidates(2.7, [1, 2, 3], [15, 20, 25])
+print(result_df)
