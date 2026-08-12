@@ -1,6 +1,7 @@
 from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter, calc_tangential_force, calc_radial_force, get_lewis_form_factor, calc_bending_stress, get_allowable_stress, calc_safety_factor
 from src.candidates import generate_candidates
 from src.candidates import filter_by_ratio
+from src.candidates import generate_candidates, filter_by_ratio, calculate_row_metrics
 import pandas as pd
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -36,22 +37,14 @@ print(result)
 filtered_result = filter_by_ratio(result,2.7,0.01)
 print(filtered_result)
 
-tangential_force = calc_tangential_force(31.85,40)
-print("tangential_force: ", tangential_force)
+pressure_angle = 20
+material_name = "Steel (Low Carbon)"
 
-radial_force = calc_radial_force(tangential_force,20)
-print("radial_force: ", radial_force)
+new_columns = filtered_result.apply(
+    calculate_row_metrics,
+    axis=1,
+    args=(torque_driver, pressure_angle, material_name)
+)
 
-Y_factor = get_lewis_form_factor(teeth_driver)
-print("Y_factor: ", Y_factor)
-
-bending_stress = calc_bending_stress(tangential_force, module, 10*module, Y_factor)
-print("bending_stress: ", bending_stress)
-
-allowable_stress = get_allowable_stress("Steel (Low Carbon)")
-print("allowable_stress: ", allowable_stress)
-
-safety_factor = calc_safety_factor(allowable_stress, bending_stress)
-print("safety_factor: ", safety_factor)
-
-
+filtered_result = pd.concat([filtered_result, new_columns], axis=1)
+print(filtered_result)
