@@ -1,4 +1,4 @@
-from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter, calc_tangential_force, calc_radial_force, get_lewis_form_factor, calc_bending_stress
+from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter, calc_tangential_force, calc_radial_force, get_lewis_form_factor, calc_bending_stress, get_allowable_stress, calc_safety_factor
 from src.candidates import generate_candidates
 from src.candidates import filter_by_ratio
 import pandas as pd
@@ -47,5 +47,11 @@ print("Y_factor: ", Y_factor)
 
 bending_stress = calc_bending_stress(tangential_force, module, 10*module, Y_factor)
 print("bending_stress: ", bending_stress)
+
+allowable_stress = get_allowable_stress("Steel (Low Carbon)")
+print("allowable_stress: ", allowable_stress)
+
+safety_factor = calc_safety_factor(allowable_stress, bending_stress)
+print("safety_factor: ", safety_factor)
 
 

@@ -1,4 +1,5 @@
 import math as math
+import pandas as pd
 
 #Function 1#
 def calc_gear_ratio (teeth_driver, teeth_driven) :
@@ -148,3 +149,39 @@ def calc_bending_stress (tangential_force, module, face_width, y_factor):
     bending_stress = tangential_force / (module * face_width * y_factor)
     return bending_stress
 
+#Function 10#
+def get_allowable_stress(material_name):
+    """
+    Look up the allowable bending stress for a given material.
+
+    Simplified reference values for the Lewis bending stress equation,
+    from common introductory machine design references. Not a substitute
+    for a full material datasheet — validate against a proper materials
+    engineering source before real design use.
+
+    Args:
+        material_name (str): Name of the material, must match an entry
+            in data/materials.csv exactly.
+
+    Returns:
+        float: Allowable bending stress in N/mm^2 (MPa).
+    """
+    materials_df = pd.read_csv("data/materials.csv")
+    row = materials_df[materials_df["material"] == material_name]
+    allowable_stress = row["allowable_bending_stress_mpa"].values[0]
+    return allowable_stress
+
+#Function 11#
+def calc_safety_factor (allowable_stress, bending_stress):
+    """
+    Calculate the safety factor
+
+    Args:
+    allowable_stress (float): allowable bending stress in N/mm ^ 2
+    bending_stress (float): bending stress in N/mm ^ 2
+
+    Returns:
+    float: safety factor
+    """
+    safety_factor = allowable_stress / bending_stress
+    return safety_factor
