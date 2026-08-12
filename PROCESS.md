@@ -80,15 +80,26 @@ Bronze,55
 
 **FULL CALCULATION CHAIN NOW COMPLETE:** power/speed → torque → forces → bending stress → safety factor, for a single candidate. Next major step is applying this across every row of the filtered candidates DataFrame at once (Lesson 15, needs Pandas `.apply()` — not yet taught).
 
-## `src/candidates.py` — 2 functions, complete and tested
+## `src/candidates.py` — 3 functions, complete and tested (updated through Lesson 15.5)
 
 - `generate_candidates(target_ratio, standard_modules, teeth_range)`: nested loop, imports `calc_pitch_diameter` from `src.calculations`, builds list-of-dicts → Pandas DataFrame. Returns 7 columns: module, teeth_driver, teeth_driven, actual_ratio, pitch_diameter_driver, pitch_diameter_driven, center_distance.
 - `filter_by_ratio(df, target_ratio, tolerance)`: boolean mask filter (`&` not `and`), keeps rows where `actual_ratio` within `target_ratio ± tolerance`. Kept as a SEPARATE function from `generate_candidates` deliberately (single responsibility principle) — do not merge these.
+- `calculate_row_metrics(row, torque_driver, pressure_angle, material_name)`: runs the FULL calc chain (tangential force → radial force → Y-factor → bending stress → allowable stress lookup → safety factor) for ONE candidate row. Returns a `pd.Series` with 4 values: tangential_force, radial_force, bending_stress, safety_factor. Deliberately takes torque_driver/pressure_angle/material_name as EXPLICIT parameters (not silently read from outer scope) — this was a real bug caught and fixed in Lesson 15.5; the fix required using `.apply(func, axis=1, args=(...))` since `.apply()` only auto-passes `row`, extra fixed args must go through `args=`.
 
-**Verified:** target_ratio=2.7, modules=[1,2,3], teeth_range=[15,20,25] → 9 candidates generated; tolerance=0.01 correctly filters down to 3 rows (only exact actual_ratio=2.7 matches, teeth_driver=20 across all 3 modules). Original DataFrame indices preserved after filtering (not renumbered) — expected Pandas behavior.
+**Verified:** target_ratio=2.7, modules=[1,2,3], teeth_range=[15,20,25] → 9 candidates generated; tolerance=0.01 filters to 3 rows (teeth_driver=20 across all 3 modules). Applying `calculate_row_metrics` via `.apply(..., axis=1, args=(torque_driver, pressure_angle, material_name))` + `pd.concat([filtered_result, new_columns], axis=1)` produces the final 11-column table:
 
-## `app.py` — orchestrator only, no logic
-Currently defines test variables explicitly at top (`teeth_driver=20`, `teeth_driven=60`, `module=2`, etc. — IMPORTANT lesson learned: must define these as real named variables, NOT just pass literals into functions, since function parameter names don't leak out as caller-side variables), then calls the full chain from both modules in sequence, printing every result. Also sets `pd.set_option('display.max_columns', None)` and `pd.set_option('display.width', None)` near the top so full DataFrames print without truncation in the console.
+| module | safety_factor | verdict |
+|---|---|---|
+| 1 | ≈0.126 | fails immediately |
+| 2 | ≈1.005 | marginal, no real safety margin |
+| 3 | ≈3.393 | comfortably safe |
+
+This is the first point in the project where the tool can automatically distinguish good vs. bad candidate designs — genuinely the payoff of the whole calculation engine.
+
+## `app.py` — orchestrator only, no logic (updated through Lesson 15.5)
+Defines test variables explicitly near top (`teeth_driver=20`, `teeth_driven=60`, `module=2`, `torque_driver` computed via `calc_driver_torque`, `pressure_angle=20`, `material_name="Steel (Low Carbon)"`), then: runs the single-candidate demonstration chain (ratio→torque→forces→pitch diameters), generates+filters candidates, then applies `calculate_row_metrics` across all filtered candidates via `.apply(..., args=(...))` + `pd.concat`, prints final results table. Sets `pd.set_option('display.max_columns', None)` and `pd.set_option('display.width', None)` near top so full DataFrames print without truncation.
+
+**Old step-by-step single-candidate force/stress calls (from Lessons 12-14) were removed** once `calculate_row_metrics` replaced them — avoid duplicating logic between the two.
 
 ---
 
@@ -107,6 +118,10 @@ Currently defines test variables explicitly at top (`teeth_driver=20`, `teeth_dr
 - Nested loops for combinatorial candidate generation, f-strings
 - Python dictionaries as lookup tables; `min(iterable, key=lambda...)` pattern for finding closest match
 - `math.radians()`/`math.tan()` — trig functions expect radians, not degrees
+- `DataFrame.apply(function, axis=1)` — runs a function once per row (row behaves like a dict, access via `row["column"]`), collects return values into a new column. When a function returns MULTIPLE values, return a `pd.Series({...})` from it, and use `pd.concat([original_df, new_columns_df], axis=1)` to merge results back as new columns.
+- `.apply(func, axis=1, args=(...))` — how to pass EXTRA fixed arguments (not from the row) into an apply function. Important lesson: a function should never silently rely on outer-scope variables it didn't explicitly declare as parameters — this is fragile and was caught as a real bug (Lesson 15.5) and fixed by making torque_driver/pressure_angle/material_name explicit parameters passed via `args=`.
+- `pd.read_csv()` for loading tabular reference data (materials.csv) into a DataFrame; filtering + `.values[0]` pattern to extract a single looked-up value; what happens (IndexError) when a filter matches zero rows — a real traceback read and understood, not just avoided
+- CSV format gotcha: a value containing a comma MUST be wrapped in quotes ("Steel (Medium Carbon, Heat Treated)") or the file silently corrupts — columns shift with no error thrown
 - Explicit unit-labeled parameter names as a defensive coding habit (e.g. `pitch_diameter_mm`, `pressure_angle_deg`)
 - Critical distinction: function parameter names ≠ caller-side variables; passing a literal doesn't create a named variable in the calling file
 - Python packages: `__init__.py`, `from src.module import function` — must use `src.xxx` form from ANY file including files inside `src/` itself
@@ -118,18 +133,21 @@ Currently defines test variables explicitly at top (`teeth_driver=20`, `teeth_dr
 
 ## Immediate Next Steps (in order)
 
-1. **Lesson 15 (next up):** Apply the full calculation chain (tangential force → radial force → bending stress → safety factor) across EVERY row of the filtered candidates DataFrame at once, not just one hardcoded example. Needs a new Pandas concept: `.apply()` (running a function across DataFrame rows) — not yet taught, teach as part of this lesson. End result: filtered candidates DataFrame gains new columns (tangential_force, radial_force, bending_stress, safety_factor) for every single candidate.
+1. **Lesson 16 (next up):** Real optimization/ranking. Currently the tool can only show a table where a human eyeballs the safety_factor column to pick the best candidate. Need to build actual selection logic:
+   - Filter out unsafe candidates (e.g., safety_factor < some minimum threshold, like 1.5)
+   - Rank/select best candidate(s) by a defined objective — likely maximize safety_factor, or minimize center_distance among safe candidates, or some combination (multi-objective trade-off worth discussing explicitly with the student)
+   - Decide: simple Pandas sort/filter approach first, OR jump straight to `scipy.optimize`? Recommend teaching simple Pandas ranking first (fast, builds on existing skills), THEN introduce SciPy as "the more powerful/general version" if the project needs true multi-variable optimization later. Don't overcomplicate — check Rule #30 (no scope creep).
+   - This becomes `src/optimiser.py` (see naming decision below, still unresolved).
 2. Git commit checkpoint after this is working.
-3. Mini-lesson on SciPy basics (not yet taught) before building `src/optimiser.py` — use `scipy.optimize` (or simpler: sort/rank by safety_factor using Pandas) to select best candidates by an objective (e.g., maximize safety factor while minimizing size/center distance — likely a multi-objective trade-off worth discussing).
-4. Mini-lesson on `pytest` (not yet taught) before writing `tests/test_calculations.py`, `tests/test_candidates.py`, `tests/test_optimiser.py`.
-5. (Optional, lower priority) Add basic error handling to `get_allowable_stress()` for unrecognized material names — ties into `src/validation.py`, still empty.
-6. Build the Streamlit interface — `app.py` currently is just a test/orchestration script; this becomes the real UI (input form → results table → charts).
-7. Validate results against a textbook example (e.g. Shigley's Mechanical Engineering Design) — per Rule #17.
-8. Write README.md properly, add screenshots once UI exists.
-9. Interview-question review across all phases before considering Project 1 "done."
+3. Mini-lesson on `pytest` (not yet taught) before writing `tests/test_calculations.py`, `tests/test_candidates.py`, `tests/test_optimiser.py`.
+4. (Optional, lower priority) Add basic error handling to `get_allowable_stress()` for unrecognized material names — ties into `src/validation.py`, still empty. Known failure mode already understood: raises `IndexError` on zero matching rows.
+5. Build the Streamlit interface — `app.py` currently is just a test/orchestration script; this becomes the real UI. IMPORTANT CONTEXT: confirmed with student that the final app takes REAL user input (power, RPM, target ratio, material dropdown from materials.csv, pressure angle, etc.) via Streamlit widgets — none of our hardcoded test values (teeth_driver=20, module=2, "Steel (Low Carbon)", etc.) are meant to survive into the final product. Hardcoding was a deliberate development choice (easier to verify calculations against hand-checked expected values) — business logic proven correct first, UI wiring last. `app.py`'s current structure (pure orchestrator, no logic) makes this swap straightforward later.
+6. Validate results against a textbook example (e.g. Shigley's Mechanical Engineering Design) — per Rule #17.
+7. Write README.md properly, add screenshots once UI exists.
+8. Interview-question review across all phases before considering Project 1 "done."
 
 ## Rough Progress Estimate
-~45% through Project 1 as of this log. Architecture, and the FULL calculation engine (ratio/torque/forces/bending stress/safety factor) are done, plus candidate generation+filtering. Remaining: applying calculations across all candidates at once, SciPy optimization, Streamlit UI, testing, and validation/documentation — the UI build is likely to be the single largest remaining time investment.
+~55% through Project 1 as of this log. Full calculation engine, candidate generation+filtering, AND applying calculations across all candidates simultaneously are done. Remaining: actual optimization/ranking logic, testing, Streamlit UI, and validation/documentation. The UI build is still likely the single largest remaining time investment, but the analytical "brain" of the tool is essentially complete.
 
 ## Open Items / Decisions to Revisit
 - **Naming: `optimiser.py` vs `optimizer.py`** — was raised early, recommended standardizing to American spelling ("optimizer") for consistency with rest of codebase and with `scipy.optimize`, but file is still named `optimiser.py` and not yet renamed. Worth deciding before writing real code into it (cheaper to rename now while empty).
