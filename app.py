@@ -1,7 +1,6 @@
-from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter, calc_tangential_force, calc_radial_force, get_lewis_form_factor, calc_bending_stress, get_allowable_stress, calc_safety_factor
-from src.candidates import generate_candidates
-from src.candidates import filter_by_ratio
+from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driver_torque, calc_driven_side, calc_pitch_diameter
 from src.candidates import generate_candidates, filter_by_ratio, calculate_row_metrics
+from src.optimiser import filter_safe_candidates, select_best_candidate
 import pandas as pd
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -48,3 +47,9 @@ new_columns = filtered_result.apply(
 
 filtered_result = pd.concat([filtered_result, new_columns], axis=1)
 print(filtered_result)
+
+filtered_safe_candidates = filter_safe_candidates(filtered_result, 1.5)
+print(filtered_safe_candidates)
+
+best_candidate = select_best_candidate(filtered_safe_candidates)
+print(best_candidate)
