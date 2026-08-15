@@ -1,4 +1,6 @@
 import pytest
+from pygments.styles import material
+
 from src.calculations import calc_gear_ratio, rpm_to_omega, calc_driven_side, calc_driver_torque, calc_pitch_diameter, calc_tangential_force, calc_radial_force,calc_bending_stress,calc_safety_factor, get_lewis_form_factor, get_allowable_stress
 
 def test_calc_gear_ratio():
@@ -49,6 +51,10 @@ def test_get_allowable_stress():
 def test_calc_safety_factor():
     result = calc_safety_factor(allowable_stress=138, bending_stress=137.28)
     assert result == pytest.approx(1.005, rel=1e-3)   # safety_factor
+
+def test_get_allowable_stress_invalid_materials():
+    with pytest.raises(ValueError, match = "Unknown material"):
+        get_allowable_stress("Titanium")
 
 
 

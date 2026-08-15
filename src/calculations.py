@@ -168,7 +168,10 @@ def get_allowable_stress(material_name):
     """
     materials_df = pd.read_csv("data/materials.csv")
     row = materials_df[materials_df["material"] == material_name]
-    allowable_stress = row["allowable_bending_stress_mpa"].values[0]
+    if row.empty:
+        raise ValueError(f"Unknown material: '{material_name}'. Must match an entry in data/materials.csv.")
+
+    allowable_stress = row ["allowable_bending_stress_mpa"].values[0]
     return allowable_stress
 
 #Function 11#
