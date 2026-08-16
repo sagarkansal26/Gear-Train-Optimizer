@@ -52,6 +52,25 @@ def test_calc_safety_factor():
     result = calc_safety_factor(allowable_stress=138, bending_stress=137.28)
     assert result == pytest.approx(1.005, rel=1e-3)   # safety_factor
 
+def test_calc_bending_stress_external_validation():
+    """
+    Cross-check against an independent published Lewis-equation source
+    (not the project's own hand-verified case), to confirm the formula
+    implementation matches external, third-party expectations.
+    Source: gear design calculator using the standard simplified Lewis formula.
+    """
+    result = calc_bending_stress(tangential_force=500, module=2, face_width=20, y_factor=0.35)
+    assert result == pytest.approx(35.7, rel=1e-2)
+
+
+def test_calc_safety_factor_external_validation():
+    """
+    Cross-check against the same independent source's stated safety factor,
+    using its rounded bending_stress output as input.
+    """
+    result = calc_safety_factor(allowable_stress=210, bending_stress=35.7)
+    assert result == pytest.approx(5.88, rel=1e-2)
+
 def test_get_allowable_stress_invalid_materials():
     with pytest.raises(ValueError, match = "Unknown material"):
         get_allowable_stress("Titanium")
